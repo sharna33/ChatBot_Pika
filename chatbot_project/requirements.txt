@@ -1,0 +1,7 @@
+requests
+PyPDF2
+sumy
+nltk
+transformers
+youtube-transcript-api
+pytube
