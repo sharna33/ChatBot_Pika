@@ -5,10 +5,6 @@ from sumy.summarizers.lsa import LsaSummarizer
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
 from transformers import pipeline
-<<<<<<< HEAD
-=======
-from pytube import YouTube  
->>>>>>> 1f5b2fea555c7d390e3e0bd1e31c90e33d1f0ba4
 
 class Summarizer:
     def __init__(self):
