@@ -4,4 +4,3 @@ sumy
 nltk
 transformers
 youtube-transcript-api
-pytube

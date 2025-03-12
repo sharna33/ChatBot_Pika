@@ -5,7 +5,6 @@ from sumy.summarizers.lsa import LsaSummarizer
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
 from transformers import pipeline
-from pytube import YouTube  # Add this import
 
 class Summarizer:
     def __init__(self):
@@ -51,16 +50,83 @@ class Summarizer:
             if file_path.endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as file:
                     text = file.read()
+                # Get standard summary for text files
+                summary = self.summarize_text(text)
             elif file_path.endswith(".pdf"):
-                with open(file_path, "rb") as file:
-                    pdf = PyPDF2.PdfReader(file)
-                    text = "".join(page.extract_text() for page in pdf.pages)
+                text = self._extract_pdf_text(file_path)
+                if not text:
+                    return "Could not extract text from PDF file."
+                
+                # Calculate appropriate summary length based on PDF content size
+                word_count = len(text.split())
+                print(f"PDF word count: {word_count}")
+                
+                # Adjust summary parameters based on content length
+                if word_count > 1000:
+                    max_length = 400  # Longer summary for lengthy PDFs
+                    sentences_count = 15
+                elif word_count > 500:
+                    max_length = 300  # Medium length summary
+                    sentences_count = 12
+                else:
+                    max_length = 250  # Standard summary for shorter PDFs
+                    sentences_count = 8
+                    
+                # Get custom summary for PDFs
+                summary = self.summarize_text(text, sentences_count=sentences_count, max_length=max_length)
             else:
                 return "Unsupported file type. Use .txt or .pdf."
-            return self.summarize_text(text)
+                
+            # Add the emoji and formatting for all successful summaries
+            return f"📝 Summary:\n\n{summary}"
         except Exception as e:
             return f"Error: {str(e)}"
-    
+
+    def _extract_pdf_text(self, file_path):
+        """Extract and clean text from PDF file with improved handling."""
+        try:
+            with open(file_path, "rb") as file:
+                pdf = PyPDF2.PdfReader(file)
+                num_pages = len(pdf.pages)
+                
+                # Handle empty PDF
+                if num_pages == 0:
+                    return ""
+                    
+                all_text = []
+                
+                # Extract text from each page with error handling
+                for i in range(num_pages):
+                    try:
+                        page = pdf.pages[i]
+                        text = page.extract_text()
+                        
+                        # Skip empty pages
+                        if text and text.strip():
+                            # Clean the text
+                            text = text.replace('\n\n', ' ').replace('\n', ' ')
+                            text = re.sub(r'\s+', ' ', text)
+                            all_text.append(text)
+                    except Exception as e:
+                        print(f"Error extracting text from page {i+1}: {str(e)}")
+                        continue
+                
+                combined_text = " ".join(all_text)
+                
+                # Additional cleaning
+                combined_text = re.sub(r'[^\w\s.,;:!?()\[\]{}\-"\'`]', '', combined_text)  # Remove special characters
+                combined_text = re.sub(r'\s+', ' ', combined_text)  # Normalize whitespace
+                
+                # Remove page numbers and common headers/footers
+                combined_text = re.sub(r'\b\d+\b\s+of\s+\b\d+\b', '', combined_text)  # "X of Y" page indicators
+                combined_text = re.sub(r'Page\s+\d+', '', combined_text)  # "Page X" indicators
+                
+                return combined_text.strip()
+                
+        except Exception as e:
+            print(f"PDF extraction failed: {str(e)}")
+            return ""
+
     def summarize_video(self, video_url):
         """Summarize a YouTube video with more detailed output."""
         try:
